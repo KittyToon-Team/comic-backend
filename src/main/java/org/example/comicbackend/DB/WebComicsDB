@@ -1,0 +1,126 @@
+-- 1. Tạo Database
+CREATE DATABASE WebComicsDB;
+GO
+
+-- Sử dụng Database vừa tạo
+USE WebComicsDB;
+GO
+
+-- 2. Tạo bảng Người dùng (Users)
+CREATE TABLE Users (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    avatar_url VARCHAR(255),
+    role VARCHAR(20) DEFAULT 'USER', -- 'USER' hoặc 'ADMIN'
+    created_at DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- 3. Tạo bảng Thể loại (Categories)
+CREATE TABLE Categories (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    name NVARCHAR(100) NOT NULL UNIQUE,
+    description NVARCHAR(500)
+);
+GO
+
+-- 4. Tạo bảng Truyện (Stories)
+CREATE TABLE Stories (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    title NVARCHAR(255) NOT NULL,
+    author NVARCHAR(150),
+    description NVARCHAR(MAX),
+    cover_image_url VARCHAR(255),
+    status NVARCHAR(50) DEFAULT N'Đang ra', -- Đang ra, Hoàn thành, Tạm ngưng
+    view_count INT DEFAULT 0,
+    created_at DATETIME DEFAULT GETDATE(),
+    updated_at DATETIME DEFAULT GETDATE()
+);
+GO
+
+-- 5. Tạo bảng trung gian Truyện - Thể loại (Nhiều - Nhiều)
+CREATE TABLE Story_Category (
+    story_id INT,
+    category_id INT,
+    PRIMARY KEY (story_id, category_id),
+    FOREIGN KEY (story_id) REFERENCES Stories(id) ON DELETE CASCADE,
+    FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE CASCADE
+);
+GO
+
+-- 6. Tạo bảng Chương truyện (Chapters)
+CREATE TABLE Chapters (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    story_id INT NOT NULL,
+    chapter_number FLOAT NOT NULL, -- Dùng FLOAT để hỗ trợ chương 1.5, 1.2
+    title NVARCHAR(255),
+    content NVARCHAR(MAX), -- Lưu nội dung text (nếu truyện chữ) hoặc danh sách link ảnh (nếu truyện tranh)
+    created_at DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (story_id) REFERENCES Stories(id) ON DELETE CASCADE
+);
+GO
+
+-- 7. Tạo bảng Bình luận (Comments)
+CREATE TABLE Comments (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NOT NULL,
+    story_id INT NOT NULL,
+    content NVARCHAR(1000) NOT NULL,
+    created_at DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+    FOREIGN KEY (story_id) REFERENCES Stories(id) ON DELETE CASCADE
+);
+GO
+
+-- 8. Tạo bảng Theo dõi / Yêu thích (Favorites)
+CREATE TABLE Favorites (
+    user_id INT,
+    story_id INT,
+    created_at DATETIME DEFAULT GETDATE(),
+    PRIMARY KEY (user_id, story_id),
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+    FOREIGN KEY (story_id) REFERENCES Stories(id) ON DELETE CASCADE
+);
+GO
+
+-- 9. Tạo bảng Lịch sử đọc (Reading_History)
+CREATE TABLE Reading_History (
+    user_id INT,
+    story_id INT,
+    last_chapter_id INT NOT NULL,
+    updated_at DATETIME DEFAULT GETDATE(),
+    PRIMARY KEY (user_id, story_id),
+    FOREIGN KEY (user_id) REFERENCES Users(id), -- Không dùng CASCADE ở đây để tránh đụng độ vòng lặp xóa
+    FOREIGN KEY (story_id) REFERENCES Stories(id),
+    FOREIGN KEY (last_chapter_id) REFERENCES Chapters(id)
+);
+GO
+
+-- ========================================================
+-- THÊM DỮ LIỆU MẪU (DUMMY DATA) ĐỂ DỄ RENDER LÊN VUE 3
+-- ========================================================
+
+INSERT INTO Users (username, password, email, role) VALUES
+('admin', '123456', 'admin@webtruyen.com', 'ADMIN'),
+('docgia1', '123456', 'docgia1@gmail.com', 'USER');
+
+INSERT INTO Categories (name, description) VALUES
+(N'Tiên Hiệp', N'Truyện tu tiên, luyện đạo'),
+(N'Xuyên Không', N'Nhân vật chính đi tới thế giới khác'),
+(N'Hài Hước', N'Truyện mang tính giải trí cao');
+
+INSERT INTO Stories (title, author, description, status) VALUES
+(N'Phàm Nhân Tu Tiên', N'Vong Ngữ', N'Câu chuyện về một thanh niên bình thường bước lên con đường tu tiên...', N'Hoàn thành'),
+(N'Ta Trời Sinh Đã Là Nhân Vật Phản Diện', N'Thiên Mệnh', N'Vừa mở mắt đã thấy mình là thiếu chủ ma giáo...', N'Đang ra');
+
+INSERT INTO Story_Category (story_id, category_id) VALUES
+(1, 1), -- Phàm Nhân Tu Tiên - Tiên Hiệp
+(2, 2), -- Phản Diện - Xuyên Không
+(2, 3); -- Phản Diện - Hài Hước
+
+INSERT INTO Chapters (story_id, chapter_number, title, content) VALUES
+(1, 1, N'Sơn Thôn Tiểu Tử', N'Nội dung chương 1 của Phàm Nhân Tu Tiên...'),
+(1, 2, N'Mặc Đại Phu', N'Nội dung chương 2 của Phàm Nhân Tu Tiên...');
+GO
