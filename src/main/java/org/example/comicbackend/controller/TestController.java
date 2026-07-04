@@ -1,4 +1,4 @@
-package org.example.comicbackend.Controller; // Nhớ đổi tên package cho khớp máy bạn
+package org.example.comicbackend.controller; // Nhớ đổi tên package cho khớp máy bạn
 
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;

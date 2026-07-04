@@ -10,10 +10,11 @@ GO
 CREATE TABLE Users (
     id INT IDENTITY(1,1) PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
+    display_name NVARCHAR(100), -- Tên hiển thị
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     avatar_url VARCHAR(255),
-    role VARCHAR(20) DEFAULT 'USER', -- 'USER' hoặc 'ADMIN'
+    role VARCHAR(20) DEFAULT 'USER', -- USER hoặc ADMIN
     created_at DATETIME DEFAULT GETDATE()
 );
 GO
@@ -30,10 +31,11 @@ GO
 CREATE TABLE Stories (
     id INT IDENTITY(1,1) PRIMARY KEY,
     title NVARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE, -- URL đẹp
     author NVARCHAR(150),
     description NVARCHAR(MAX),
     cover_image_url VARCHAR(255),
-    status NVARCHAR(50) DEFAULT N'Đang ra', -- Đang ra, Hoàn thành, Tạm ngưng
+    status NVARCHAR(50) DEFAULT N'Đang ra',
     view_count INT DEFAULT 0,
     created_at DATETIME DEFAULT GETDATE(),
     updated_at DATETIME DEFAULT GETDATE()
@@ -53,12 +55,39 @@ GO
 -- 6. Tạo bảng Chương truyện (Chapters)
 CREATE TABLE Chapters (
     id INT IDENTITY(1,1) PRIMARY KEY,
+
     story_id INT NOT NULL,
-    chapter_number FLOAT NOT NULL, -- Dùng FLOAT để hỗ trợ chương 1.5, 1.2
+
+    chapter_number DECIMAL(6,2) NOT NULL,
+
     title NVARCHAR(255),
-    content NVARCHAR(MAX), -- Lưu nội dung text (nếu truyện chữ) hoặc danh sách link ảnh (nếu truyện tranh)
+
+    access_type TINYINT DEFAULT 0,
+    -- 0 = Public
+    -- 1 = Phải đăng nhập mới đọc
+
+    view_count INT DEFAULT 0,
+
     created_at DATETIME DEFAULT GETDATE(),
-    FOREIGN KEY (story_id) REFERENCES Stories(id) ON DELETE CASCADE
+
+    FOREIGN KEY (story_id)
+        REFERENCES Stories(id)
+        ON DELETE CASCADE
+);
+GO
+
+CREATE TABLE Chapter_Images (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+
+    chapter_id INT NOT NULL,
+
+    image_url VARCHAR(500) NOT NULL,
+
+    image_order INT NOT NULL,
+
+    FOREIGN KEY (chapter_id)
+        REFERENCES Chapters(id)
+        ON DELETE CASCADE
 );
 GO
 
@@ -90,37 +119,16 @@ CREATE TABLE Reading_History (
     user_id INT,
     story_id INT,
     last_chapter_id INT NOT NULL,
-    updated_at DATETIME DEFAULT GETDATE(),
+    last_read_at DATETIME DEFAULT GETDATE(),
+
     PRIMARY KEY (user_id, story_id),
-    FOREIGN KEY (user_id) REFERENCES Users(id), -- Không dùng CASCADE ở đây để tránh đụng độ vòng lặp xóa
+
+    FOREIGN KEY (user_id) REFERENCES Users(id),
     FOREIGN KEY (story_id) REFERENCES Stories(id),
     FOREIGN KEY (last_chapter_id) REFERENCES Chapters(id)
 );
 GO
 
--- ========================================================
--- THÊM DỮ LIỆU MẪU (DUMMY DATA) ĐỂ DỄ RENDER LÊN VUE 3
--- ========================================================
-
-INSERT INTO Users (username, password, email, role) VALUES
-('admin', '123456', 'admin@webtruyen.com', 'ADMIN'),
-('docgia1', '123456', 'docgia1@gmail.com', 'USER');
-
-INSERT INTO Categories (name, description) VALUES
-(N'Tiên Hiệp', N'Truyện tu tiên, luyện đạo'),
-(N'Xuyên Không', N'Nhân vật chính đi tới thế giới khác'),
-(N'Hài Hước', N'Truyện mang tính giải trí cao');
-
-INSERT INTO Stories (title, author, description, status) VALUES
-(N'Phàm Nhân Tu Tiên', N'Vong Ngữ', N'Câu chuyện về một thanh niên bình thường bước lên con đường tu tiên...', N'Hoàn thành'),
-(N'Ta Trời Sinh Đã Là Nhân Vật Phản Diện', N'Thiên Mệnh', N'Vừa mở mắt đã thấy mình là thiếu chủ ma giáo...', N'Đang ra');
-
-INSERT INTO Story_Category (story_id, category_id) VALUES
-(1, 1), -- Phàm Nhân Tu Tiên - Tiên Hiệp
-(2, 2), -- Phản Diện - Xuyên Không
-(2, 3); -- Phản Diện - Hài Hước
-
-INSERT INTO Chapters (story_id, chapter_number, title, content) VALUES
-(1, 1, N'Sơn Thôn Tiểu Tử', N'Nội dung chương 1 của Phàm Nhân Tu Tiên...'),
-(1, 2, N'Mặc Đại Phu', N'Nội dung chương 2 của Phàm Nhân Tu Tiên...');
-GO
+INSERT INTO Users (username, display_name, password, email, role) VALUES
+('admin', N'Quản trị viên', '123', 'admin@webtruyen.com', 'ADMIN'),
+('docgia1', N'Độc giả 1', '123', 'docgia1@gmail.com', 'USER');
