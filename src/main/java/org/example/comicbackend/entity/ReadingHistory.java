@@ -1,5 +1,6 @@
 package org.example.comicbackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -20,14 +21,17 @@ public class ReadingHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "story_id")
     private Story story;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "last_chapter_id")
     private Chapter lastChapter;

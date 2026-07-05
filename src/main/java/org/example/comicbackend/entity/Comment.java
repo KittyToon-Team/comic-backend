@@ -1,5 +1,6 @@
 package org.example.comicbackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,10 +27,12 @@ public class Comment {
     @Column(name = "created_at")
     private Date createdAt;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "story_id")
     private Story story;

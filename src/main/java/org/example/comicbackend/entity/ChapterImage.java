@@ -1,5 +1,6 @@
 package org.example.comicbackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -25,6 +26,7 @@ public class ChapterImage {
     @Column(name = "image_order")
     private Integer imageOrder;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "chapter_id")
     private Chapter chapter;

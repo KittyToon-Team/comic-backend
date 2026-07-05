@@ -1,5 +1,6 @@
 package org.example.comicbackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -51,15 +52,19 @@ public class Story {
     @Column(name = "updated_at")
     private Date updatedAt;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "story")
     private List<Chapter> chapters;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "story")
     private List<Comment> comments;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "story")
     private List<Favorite> favorites;
 
+    @JsonIgnore
     @ManyToMany
     @JoinTable(
             name = "Story_Category",

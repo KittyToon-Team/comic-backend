@@ -1,5 +1,6 @@
 package org.example.comicbackend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,6 +27,7 @@ public class Category {
     @Column(name = "description")
     private String description;
 
+    @JsonIgnore
     @ManyToMany(mappedBy = "categories")
     private List<Story> stories;
 }
