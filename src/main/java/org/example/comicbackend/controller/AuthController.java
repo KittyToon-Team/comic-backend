@@ -1,6 +1,5 @@
 package org.example.comicbackend.controller;
 
-import org.example.comicbackend.controller.dto.LoginRequest;
 import org.example.comicbackend.entity.User;
 import org.example.comicbackend.repository.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -34,9 +33,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-        Optional<User> user = userRepository.findByEmail(loginRequest.getEmail());
-        if (user.isPresent() && user.get().getPassword().equals(loginRequest.getPassword())) {
+    public ResponseEntity<?> login(@RequestBody User loginUser) {
+        Optional<User> user = userRepository.findByUsername(loginUser.getUsername());
+        if (user.isPresent() && user.get().getPassword().equals(loginUser.getPassword())) {
             return ResponseEntity.ok(user.get());
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Sai tài khoản hoặc mật khẩu");
