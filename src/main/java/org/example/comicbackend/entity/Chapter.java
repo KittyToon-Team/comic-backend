@@ -39,13 +39,12 @@ public class Chapter {
     @Column(name = "created_at")
     private Date createdAt;
 
-    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "story_id")
     private Story story;
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "chapter")
+    @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("imageOrder ASC")
     private List<ChapterImage> images;
 
     @JsonIgnore

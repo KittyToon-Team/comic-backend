@@ -64,8 +64,7 @@ public class Story {
     @OneToMany(mappedBy = "story")
     private List<Favorite> favorites;
 
-    @JsonIgnore
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "Story_Category",
             joinColumns = @JoinColumn(name = "story_id"),
