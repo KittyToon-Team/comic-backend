@@ -1,6 +1,7 @@
 package org.example.comicbackend.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -41,6 +42,7 @@ public class Chapter {
 
     @ManyToOne
     @JoinColumn(name = "story_id")
+    @JsonIgnoreProperties({"chapters", "hibernateLazyInitializer", "handler"})
     private Story story;
 
     @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)

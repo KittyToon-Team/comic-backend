@@ -1,102 +1,113 @@
 package org.example.comicbackend.controller.admin;
 
-import org.example.comicbackend.controller.dto.ChapterRequest;
 import org.example.comicbackend.entity.Chapter;
 import org.example.comicbackend.entity.ChapterImage;
 import org.example.comicbackend.entity.Story;
+import org.example.comicbackend.repository.ChapterImageRepository;
 import org.example.comicbackend.repository.ChapterRepository;
 import org.example.comicbackend.repository.StoryRepository;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @RestController
-@RequestMapping("/api/admin/chapters")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
+@RequestMapping("/api/admin")
+@CrossOrigin(origins = "*")
 public class AdminChapterController {
 
-    private final ChapterRepository chapterRepository;
-    private final StoryRepository storyRepository;
+    @Autowired private ChapterRepository chapterRepository;
+    @Autowired private StoryRepository storyRepository;
+    @Autowired private ChapterImageRepository chapterImageRepository;
 
-    public AdminChapterController(ChapterRepository chapterRepository, StoryRepository storyRepository) {
-        this.chapterRepository = chapterRepository;
-        this.storyRepository = storyRepository;
+    @GetMapping("/stories/{storyId}/chapters")
+    public ResponseEntity<?> getChaptersByStory(@PathVariable Integer storyId) {
+        List<Chapter> chapters = chapterRepository.findByStory_IdOrderByChapterNumberDesc(storyId);
+        return ResponseEntity.ok(chapters);
     }
 
-    @GetMapping("/story/{storyId}")
-    public ResponseEntity<List<Chapter>> getByStory(@PathVariable Integer storyId) {
-        return storyRepository.findById(storyId)
-                .map(story -> ResponseEntity.ok(chapterRepository.findByStoryOrderByChapterNumberAsc(story)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
+    @PostMapping("/chapters")
+    public ResponseEntity<?> createChapter(@RequestBody Map<String, Object> payload) {
+        Integer storyId = (Integer) payload.get("storyId");
+        Double chapterNumber = Double.parseDouble(payload.get("chapterNumber").toString());
+        String title = (String) payload.get("title");
+        Integer accessType = (Integer) payload.get("accessType");
+        List<String> imageUrls = (List<String>) payload.get("imageUrls");
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Chapter> getById(@PathVariable Integer id) {
-        return chapterRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @PostMapping
-    public ResponseEntity<Chapter> create(@RequestBody ChapterRequest request) {
-        Story story = storyRepository.findById(request.getStoryId()).orElse(null);
-        if (story == null) {
-            return ResponseEntity.badRequest().build();
+        if (chapterRepository.existsByStory_IdAndChapterNumber(storyId, java.math.BigDecimal.valueOf(chapterNumber))) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Chương số " + chapterNumber + " đã tồn tại trong bộ truyện này!"));
         }
+
+        Story story = storyRepository.findById(storyId).orElseThrow(() -> new RuntimeException("Không tìm thấy truyện"));
 
         Chapter chapter = new Chapter();
         chapter.setStory(story);
-        chapter.setChapterNumber(request.getChapterNumber());
-        chapter.setTitle(request.getTitle());
-        chapter.setAccessType(request.getAccessType() != null ? request.getAccessType() : 0);
+        chapter.setChapterNumber(java.math.BigDecimal.valueOf(chapterNumber));
+        chapter.setTitle(title);
+        chapter.setAccessType(accessType);
         chapter.setViewCount(0);
         chapter.setCreatedAt(new Date());
-        chapter.setImages(buildImages(chapter, request.getImageUrls()));
+        Chapter savedChapter = chapterRepository.save(chapter);
 
-        Chapter saved = chapterRepository.save(chapter);
-        return new ResponseEntity<>(saved, HttpStatus.CREATED);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Chapter> update(@PathVariable Integer id, @RequestBody ChapterRequest request) {
-        return chapterRepository.findById(id)
-                .map(chapter -> {
-                    chapter.setChapterNumber(request.getChapterNumber());
-                    chapter.setTitle(request.getTitle());
-                    chapter.setAccessType(request.getAccessType() != null ? request.getAccessType() : 0);
-
-                    // Xóa toàn bộ ảnh cũ, thay bằng danh sách ảnh mới theo đúng thứ tự
-                    chapter.getImages().clear();
-                    chapter.getImages().addAll(buildImages(chapter, request.getImageUrls()));
-
-                    return ResponseEntity.ok(chapterRepository.save(chapter));
-                })
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (!chapterRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+        if (imageUrls != null) {
+            for (int i = 0; i < imageUrls.size(); i++) {
+                ChapterImage img = new ChapterImage();
+                img.setChapter(savedChapter);
+                img.setImageUrl(imageUrls.get(i));
+                img.setImageOrder(i + 1);
+                chapterImageRepository.save(img);
+            }
         }
-        chapterRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+
+        return ResponseEntity.ok(Map.of("message", "Tạo chương mới thành công!"));
     }
 
-    private List<ChapterImage> buildImages(Chapter chapter, List<String> urls) {
-        List<ChapterImage> images = new ArrayList<>();
-        if (urls == null) return images;
-        for (int i = 0; i < urls.size(); i++) {
-            ChapterImage img = new ChapterImage();
-            img.setChapter(chapter);
-            img.setImageUrl(urls.get(i));
-            img.setImageOrder(i + 1);
-            images.add(img);
+    @GetMapping("/chapters/{id}")
+    public ResponseEntity<?> getChapterById(@PathVariable Integer id) {
+        Chapter chapter = chapterRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chương truyện"));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", chapter.getId());
+        result.put("chapterNumber", chapter.getChapterNumber());
+        result.put("title", chapter.getTitle());
+        result.put("accessType", chapter.getAccessType());
+        result.put("story", Map.of("id", chapter.getStory().getId()));
+
+        List<ChapterImage> images = chapterImageRepository.findByChapterIdOrderByImageOrderAsc(id);
+        result.put("images", images);
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/chapters/{id}")
+    public ResponseEntity<?> updateChapter(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
+        Chapter chapter = chapterRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy chương để cập nhật"));
+
+        Double chapterNumber = Double.parseDouble(payload.get("chapterNumber").toString());
+        String title = (String) payload.get("title");
+        Integer accessType = (Integer) payload.get("accessType");
+        List<String> imageUrls = (List<String>) payload.get("imageUrls");
+
+        chapter.setChapterNumber(java.math.BigDecimal.valueOf(chapterNumber));
+        chapter.setTitle(title);
+        chapter.setAccessType(accessType);
+        chapterRepository.save(chapter);
+
+        chapterImageRepository.deleteByChapterId(id);
+
+        if (imageUrls != null) {
+            for (int i = 0; i < imageUrls.size(); i++) {
+                ChapterImage img = new ChapterImage();
+                img.setChapter(chapter);
+                img.setImageUrl(imageUrls.get(i));
+                img.setImageOrder(i + 1);
+                chapterImageRepository.save(img);
+            }
         }
-        return images;
+
+        return ResponseEntity.ok(Map.of("message", "Cập nhật chương thành công!"));
     }
 }
