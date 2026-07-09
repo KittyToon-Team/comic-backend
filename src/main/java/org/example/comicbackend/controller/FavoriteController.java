@@ -18,8 +18,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -60,8 +63,28 @@ public class FavoriteController {
     }
 
     @GetMapping("/users/{userId}/favorites")
-    public List<Favorite> getFavorites(@PathVariable Integer userId) {
+    public ResponseEntity<?> getFavorites(@PathVariable Integer userId) {
         Optional<User> user = userRepository.findById(userId);
-        return user.map(favoriteRepository::findByUser).orElseGet(List::of);
+        if (user.isEmpty()) {
+            return ResponseEntity.badRequest().body("User not found");
+        }
+        
+        List<Map<String, Object>> result = favoriteRepository.findByUser(user.get()).stream()
+            .map(fav -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", fav.getId());
+                map.put("createdAt", fav.getCreatedAt());
+                if (fav.getStory() != null) {
+                    map.put("story", Map.of(
+                        "id", fav.getStory().getId(),
+                        "title", fav.getStory().getTitle() != null ? fav.getStory().getTitle() : "",
+                        "coverImageUrl", fav.getStory().getCoverImageUrl() != null ? fav.getStory().getCoverImageUrl() : "",
+                        "slug", fav.getStory().getSlug() != null ? fav.getStory().getSlug() : ""
+                    ));
+                }
+                return map;
+            }).collect(Collectors.toList());
+            
+        return ResponseEntity.ok(result);
     }
 }

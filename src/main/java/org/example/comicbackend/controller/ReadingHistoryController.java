@@ -20,8 +20,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -61,8 +64,35 @@ public class ReadingHistoryController {
     }
 
     @GetMapping("/users/{userId}/reading-history")
-    public List<ReadingHistory> getReadingHistory(@PathVariable Integer userId) {
+    public ResponseEntity<?> getReadingHistory(@PathVariable Integer userId) {
         Optional<User> user = userRepository.findById(userId);
-        return user.map(readingHistoryRepository::findByUserOrderByLastReadAtDesc).orElseGet(List::of);
+        if (user.isEmpty()) {
+            return ResponseEntity.badRequest().body("User not found");
+        }
+        
+        List<Map<String, Object>> result = readingHistoryRepository.findByUserOrderByLastReadAtDesc(user.get()).stream()
+            .map(history -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", history.getId());
+                map.put("lastReadAt", history.getLastReadAt());
+                if (history.getStory() != null) {
+                    map.put("story", Map.of(
+                        "id", history.getStory().getId(),
+                        "title", history.getStory().getTitle() != null ? history.getStory().getTitle() : "",
+                        "coverImageUrl", history.getStory().getCoverImageUrl() != null ? history.getStory().getCoverImageUrl() : "",
+                        "slug", history.getStory().getSlug() != null ? history.getStory().getSlug() : ""
+                    ));
+                }
+                if (history.getLastChapter() != null) {
+                    map.put("chapter", Map.of(
+                        "id", history.getLastChapter().getId(),
+                        "chapterNumber", history.getLastChapter().getChapterNumber(),
+                        "title", history.getLastChapter().getTitle() != null ? history.getLastChapter().getTitle() : ""
+                    ));
+                }
+                return map;
+            }).collect(Collectors.toList());
+            
+        return ResponseEntity.ok(result);
     }
 }
