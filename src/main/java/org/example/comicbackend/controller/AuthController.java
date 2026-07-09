@@ -1,5 +1,6 @@
 package org.example.comicbackend.controller;
 
+import org.example.comicbackend.controller.dto.ForgotPasswordRequest;
 import org.example.comicbackend.controller.dto.LoginRequest;
 import org.example.comicbackend.controller.dto.RegisterRequest;
 import org.example.comicbackend.entity.User;
@@ -42,11 +43,30 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-        Optional<User> user = userRepository.findByEmail(loginRequest.getEmail());
-        if (user.isPresent() && passwordEncoder.matches(loginRequest.getPassword(), user.get().getPassword())) {
-            return ResponseEntity.ok(user.get());
+        String account = loginRequest.getEmail(); // This could be username or email
+        Optional<User> userOpt = account.contains("@") 
+                ? userRepository.findByEmail(account) 
+                : userRepository.findByUsername(account);
+        
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            String rawPassword = loginRequest.getPassword();
+            String dbPassword = user.getPassword();
+            
+            // Check BCrypt, if fails, check plaintext (for existing manual DB records)
+            boolean isMatch = passwordEncoder.matches(rawPassword, dbPassword);
+            if (!isMatch && rawPassword.equals(dbPassword)) {
+                isMatch = true;
+                // Auto upgrade to hashed password for future logins
+                user.setPassword(passwordEncoder.encode(rawPassword));
+                userRepository.save(user);
+            }
+
+            if (isMatch) {
+                return ResponseEntity.ok(user);
+            }
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Sai tài khoản hoặc mật khẩu");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Tài khoản hoặc mật khẩu không đúng!");
     }
 
     @PostMapping("/register")
@@ -68,5 +88,17 @@ public class AuthController {
 
         User saved = userRepository.save(user);
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Email không tồn tại trong hệ thống");
+        }
+        User user = userOpt.get();
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        return ResponseEntity.ok("Đổi mật khẩu thành công");
     }
 }
