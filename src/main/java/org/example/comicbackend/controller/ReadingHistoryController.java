@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,7 +55,7 @@ public class ReadingHistoryController {
         history.setUser(userOpt.get());
         history.setStory(storyOpt.get());
         history.setLastChapter(chapterOpt.get());
-        history.setLastReadAt(new Date());
+        history.setLastReadAt(LocalDateTime.now());
         ReadingHistory saved = readingHistoryRepository.save(history);
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }

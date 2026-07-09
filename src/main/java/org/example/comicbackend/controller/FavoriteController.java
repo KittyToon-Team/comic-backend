@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,7 +54,7 @@ public class FavoriteController {
         Favorite favorite = new Favorite();
         favorite.setUser(userOpt.get());
         favorite.setStory(storyOpt.get());
-        favorite.setCreatedAt(new Date());
+        favorite.setCreatedAt(LocalDateTime.now());
         favoriteRepository.save(favorite);
         return ResponseEntity.status(HttpStatus.CREATED).body("Đã thêm vào yêu thích");
     }

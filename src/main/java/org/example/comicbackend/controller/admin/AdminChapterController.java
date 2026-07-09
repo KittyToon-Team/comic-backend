@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RestController
@@ -28,6 +29,7 @@ public class AdminChapterController {
     }
 
     @PostMapping("/chapters")
+    @SuppressWarnings("unchecked")
     public ResponseEntity<?> createChapter(@RequestBody Map<String, Object> payload) {
         Integer storyId = (Integer) payload.get("storyId");
         Double chapterNumber = Double.parseDouble(payload.get("chapterNumber").toString());
@@ -47,7 +49,7 @@ public class AdminChapterController {
         chapter.setTitle(title);
         chapter.setAccessType(accessType);
         chapter.setViewCount(0);
-        chapter.setCreatedAt(new Date());
+        chapter.setCreatedAt(LocalDateTime.now());
         Chapter savedChapter = chapterRepository.save(chapter);
 
         if (imageUrls != null) {
@@ -82,6 +84,7 @@ public class AdminChapterController {
     }
 
     @PutMapping("/chapters/{id}")
+    @SuppressWarnings("unchecked")
     public ResponseEntity<?> updateChapter(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
         Chapter chapter = chapterRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chương để cập nhật"));

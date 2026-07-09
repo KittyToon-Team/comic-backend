@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,7 +53,7 @@ public class CommentController {
 
         Comment comment = new Comment();
         comment.setContent(request.getContent());
-        comment.setCreatedAt(new Date());
+        comment.setCreatedAt(LocalDateTime.now());
         comment.setUser(userOpt.get());
         comment.setStory(storyOpt.get());
 

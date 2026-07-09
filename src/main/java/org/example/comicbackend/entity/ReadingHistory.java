@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -36,7 +36,6 @@ public class ReadingHistory {
     @JoinColumn(name = "last_chapter_id")
     private Chapter lastChapter;
 
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "last_read_at")
-    private Date lastReadAt;
+    private LocalDateTime lastReadAt;
 }

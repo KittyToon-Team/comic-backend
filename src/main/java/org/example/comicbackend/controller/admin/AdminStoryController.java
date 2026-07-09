@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.Normalizer;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -45,8 +46,8 @@ public class AdminStoryController {
     public ResponseEntity<Story> create(@RequestBody StoryRequest request) {
         Story story = new Story();
         applyRequest(story, request);
-        story.setCreatedAt(new Date());
-        story.setUpdatedAt(new Date());
+        story.setCreatedAt(LocalDateTime.now());
+        story.setUpdatedAt(LocalDateTime.now());
         story.setViewCount(0);
         Story saved = storyRepository.save(story);
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
@@ -57,7 +58,7 @@ public class AdminStoryController {
         return storyRepository.findById(id)
                 .map(story -> {
                     applyRequest(story, request);
-                    story.setUpdatedAt(new Date());
+                    story.setUpdatedAt(LocalDateTime.now());
                     return ResponseEntity.ok(storyRepository.save(story));
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());
