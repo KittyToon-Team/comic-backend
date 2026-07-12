@@ -1,4 +1,16 @@
+-- =========================================================================
+-- DATABASE: WebComicsDB
+-- =========================================================================
+
 -- 1. Tạo Database
+-- Xóa DB cũ nếu đã tồn tại để làm mới hoàn toàn (CẨN THẬN KHI CHẠY Ở MÔI TRƯỜNG THỰC TẾ)
+IF EXISTS (SELECT name FROM master.dbo.sysdatabases WHERE name = N'WebComicsDB')
+BEGIN
+    ALTER DATABASE WebComicsDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE WebComicsDB;
+END
+GO
+
 CREATE DATABASE WebComicsDB;
 GO
 
@@ -6,15 +18,20 @@ GO
 USE WebComicsDB;
 GO
 
+-- =========================================================================
+-- TẠO BẢNG (TABLES)
+-- =========================================================================
+
 -- 2. Tạo bảng Người dùng (Users)
 CREATE TABLE Users (
     id INT IDENTITY(1,1) PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
-    display_name NVARCHAR(100), -- Tên hiển thị
+    display_name NVARCHAR(100),
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     avatar_url VARCHAR(255),
     role VARCHAR(20) DEFAULT 'USER', -- USER hoặc ADMIN
+    is_locked BIT DEFAULT 0,         -- 0 = Hoạt động, 1 = Bị khóa
     created_at DATETIME DEFAULT GETDATE()
 );
 GO
@@ -23,7 +40,8 @@ GO
 CREATE TABLE Categories (
     id INT IDENTITY(1,1) PRIMARY KEY,
     name NVARCHAR(100) NOT NULL UNIQUE,
-    description NVARCHAR(500)
+    description NVARCHAR(500),
+    is_hidden BIT DEFAULT 0          -- 0 = Hiển thị, 1 = Bị ẩn
 );
 GO
 
@@ -31,7 +49,7 @@ GO
 CREATE TABLE Stories (
     id INT IDENTITY(1,1) PRIMARY KEY,
     title NVARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE, -- URL đẹp
+    slug VARCHAR(255) UNIQUE,
     author NVARCHAR(150),
     description NVARCHAR(MAX),
     cover_image_url VARCHAR(255),
@@ -55,39 +73,22 @@ GO
 -- 6. Tạo bảng Chương truyện (Chapters)
 CREATE TABLE Chapters (
     id INT IDENTITY(1,1) PRIMARY KEY,
-
     story_id INT NOT NULL,
-
     chapter_number DECIMAL(6,2) NOT NULL,
-
     title NVARCHAR(255),
-
-    access_type TINYINT DEFAULT 0,
-    -- 0 = Public
-    -- 1 = Phải đăng nhập mới đọc
-
+    access_type TINYINT DEFAULT 0,   -- 0 = Public, 1 = Phải đăng nhập
     view_count INT DEFAULT 0,
-
     created_at DATETIME DEFAULT GETDATE(),
-
-    FOREIGN KEY (story_id)
-        REFERENCES Stories(id)
-        ON DELETE CASCADE
+    FOREIGN KEY (story_id) REFERENCES Stories(id) ON DELETE CASCADE
 );
 GO
 
 CREATE TABLE Chapter_Images (
     id INT IDENTITY(1,1) PRIMARY KEY,
-
     chapter_id INT NOT NULL,
-
     image_url VARCHAR(500) NOT NULL,
-
     image_order INT NOT NULL,
-
-    FOREIGN KEY (chapter_id)
-        REFERENCES Chapters(id)
-        ON DELETE CASCADE
+    FOREIGN KEY (chapter_id) REFERENCES Chapters(id) ON DELETE CASCADE
 );
 GO
 
@@ -105,10 +106,10 @@ GO
 
 -- 8. Tạo bảng Theo dõi / Yêu thích (Favorites)
 CREATE TABLE Favorites (
-    user_id INT,
-    story_id INT,
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NOT NULL,
+    story_id INT NOT NULL,
     created_at DATETIME DEFAULT GETDATE(),
-    PRIMARY KEY (user_id, story_id),
     FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
     FOREIGN KEY (story_id) REFERENCES Stories(id) ON DELETE CASCADE
 );
@@ -116,19 +117,83 @@ GO
 
 -- 9. Tạo bảng Lịch sử đọc (Reading_History)
 CREATE TABLE Reading_History (
-    user_id INT,
-    story_id INT,
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NOT NULL,
+    story_id INT NOT NULL,
     last_chapter_id INT NOT NULL,
     last_read_at DATETIME DEFAULT GETDATE(),
-
-    PRIMARY KEY (user_id, story_id),
-
     FOREIGN KEY (user_id) REFERENCES Users(id),
     FOREIGN KEY (story_id) REFERENCES Stories(id),
     FOREIGN KEY (last_chapter_id) REFERENCES Chapters(id)
 );
 GO
 
-INSERT INTO Users (username, display_name, password, email, role) VALUES
-('admin', N'Quản trị viên', '123', 'admin@webtruyen.com', 'ADMIN'),
-('docgia1', N'Độc giả 1', '123', 'docgia1@gmail.com', 'USER');
+-- =========================================================================
+-- DỮ LIỆU MẪU (SEED DATA)
+-- =========================================================================
+
+-- Thêm Users (Mật khẩu mặc định là '123' cho tất cả)
+-- Chú ý: Ở hệ thống thực, password này đã bị mã hóa BCrypt.
+-- Do backend bạn có hỗ trợ check plaintext dự phòng nên tạm thời để '123' vẫn đăng nhập được,
+-- khi đăng nhập nó sẽ tự mã hóa lại.
+INSERT INTO Users (username, display_name, password, email, role, is_locked) VALUES
+('admin', N'Quản trị viên', '123', 'admin@webtruyen.com', 'ADMIN', 0),
+('docgia1', N'Độc giả 1', '123', 'docgia1@gmail.com', 'USER', 0),
+('banned_user', N'Kẻ phá hoại', '123', 'banned@gmail.com', 'USER', 1);
+GO
+
+-- Thêm Thể loại
+INSERT INTO Categories (name, description, is_hidden) VALUES
+(N'Hành động', N'Truyện có yếu tố đánh nhau, võ thuật rực lửa.', 0),
+(N'Tình cảm', N'Truyện lãng mạn, ngọt ngào.', 0),
+(N'Hài hước', N'Đem lại tiếng cười sảng khoái.', 0),
+(N'Xuyên không', N'Nhân vật chính du hành đến một thế giới khác.', 0),
+(N'Manhwa', N'Truyện tranh Hàn Quốc.', 0),
+(N'Ẩn giấu', N'Thể loại này đang bị ẩn, không hiện ở trang chủ.', 1);
+GO
+
+-- Thêm Truyện
+INSERT INTO Stories (title, slug, description, author, cover_image_url, status, view_count) VALUES
+(N'One Piece - Đảo Hải Tặc', 'one-piece', N'Câu chuyện về hành trình tìm kiếm kho báu vĩ đại nhất thế giới One Piece của cậu bé mũ rơm Luffy cùng những người bạn.', N'Eiichiro Oda', 'https://upload.wikimedia.org/wikipedia/vi/9/90/One_Piece%2C_Volume_61_Cover_%28Japanese%29.jpg', N'Đang ra', 15200),
+(N'Solo Leveling - Tôi Thăng Cấp Một Mình', 'solo-leveling', N'Từ một thợ săn hạng E yếu nhất, Sung Jin-Woo đã nhận được một hệ thống bí ẩn giúp cậu thăng cấp vô hạn.', N'Chugong', 'https://upload.wikimedia.org/wikipedia/vi/a/a2/Solo_Leveling_Webtoon.png', N'Hoàn thành', 85000);
+GO
+
+-- Thêm Thể loại cho Truyện
+-- One Piece (ID 1): Hành động, Hài hước
+INSERT INTO Story_Category (story_id, category_id) VALUES (1, 1), (1, 3);
+-- Solo Leveling (ID 2): Hành động, Manhwa
+INSERT INTO Story_Category (story_id, category_id) VALUES (2, 1), (2, 5);
+GO
+
+-- Thêm Chương
+-- Chương cho One Piece
+INSERT INTO Chapters (story_id, chapter_number, title, access_type, view_count) VALUES
+(1, 1, N'Chương 1: Romance Dawn - Bình minh lãng mạn', 0, 500),
+(1, 2, N'Chương 2: Chàng trai đội mũ rơm', 0, 450);
+
+-- Chương cho Solo Leveling
+INSERT INTO Chapters (story_id, chapter_number, title, access_type, view_count) VALUES
+(2, 1, N'Chương 1: Thợ săn hạng E', 0, 1200),
+(2, 2, N'Chương 2: Hầm ngục kép', 0, 1150),
+(2, 3, N'Chương 3: Nhiệm vụ bí mật (Yêu cầu đăng nhập)', 1, 980);
+GO
+
+-- Thêm Ảnh cho Chương 1 One Piece (ID 1)
+INSERT INTO Chapter_Images (chapter_id, image_url, image_order) VALUES
+(1, 'https://cdn.discordapp.com/attachments/878631405175967784/1105151528656105574/page1.jpg', 1),
+(1, 'https://cdn.discordapp.com/attachments/878631405175967784/1105151528991666246/page2.jpg', 2);
+
+-- Thêm Ảnh cho Chương 1 Solo Leveling (ID 3)
+INSERT INTO Chapter_Images (chapter_id, image_url, image_order) VALUES
+(3, 'https://cdn.discordapp.com/attachments/878631405175967784/1105151529457229864/solo1.jpg', 1),
+(3, 'https://cdn.discordapp.com/attachments/878631405175967784/1105151529851494552/solo2.jpg', 2);
+GO
+
+-- Thêm một vài Bình Luận
+INSERT INTO Comments (user_id, story_id, content) VALUES
+(2, 1, N'Truyện này đọc cuốn quá ad ơi!'),
+(2, 2, N'Jin-Woo ngầu xỉu luôn á trời ơi!!!');
+GO
+
+PRINT N'✅ Đã khởi tạo Cơ sở dữ liệu WebComicsDB thành công!';
+GO
