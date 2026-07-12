@@ -63,6 +63,9 @@ public class AuthController {
             }
 
             if (isMatch) {
+                if (Boolean.TRUE.equals(user.getIsLocked())) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
+                }
                 return ResponseEntity.ok(user);
             }
         }

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -27,25 +28,48 @@ public class StoryController {
         this.categoryRepository = categoryRepository;
     }
 
+    private boolean isStoryVisible(Story story) {
+        if (story.getCategories() == null || story.getCategories().isEmpty()) {
+            return true;
+        }
+        for (Category cat : story.getCategories()) {
+            if (Boolean.TRUE.equals(cat.getIsHidden())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @GetMapping("/stories")
     public List<Story> getAllStories() {
-        return storyRepository.findAll();
+        return storyRepository.findAll().stream()
+                .filter(this::isStoryVisible)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/stories/{id}")
     public ResponseEntity<Story> getStoryById(@PathVariable Integer id) {
         return storyRepository.findById(id)
-                .map(ResponseEntity::ok)
+                .filter(this::isStoryVisible)
+                .map(story -> {
+                    story.setViewCount((story.getViewCount() == null ? 0 : story.getViewCount()) + 1);
+                    storyRepository.save(story);
+                    return ResponseEntity.ok(story);
+                })
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/stories/search")
     public List<Story> searchStories(@RequestParam String keyword) {
-        return storyRepository.findByTitleContainingIgnoreCase(keyword);
+        return storyRepository.findByTitleContainingIgnoreCase(keyword).stream()
+                .filter(this::isStoryVisible)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/categories")
     public List<Category> getAllCategories() {
-        return categoryRepository.findAll();
+        return categoryRepository.findAll().stream()
+                .filter(cat -> !Boolean.TRUE.equals(cat.getIsHidden()))
+                .collect(Collectors.toList());
     }
 }

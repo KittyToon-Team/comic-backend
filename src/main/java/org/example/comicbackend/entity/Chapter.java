@@ -49,6 +49,6 @@ public class Chapter {
     private List<ChapterImage> images;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "lastChapter")
+    @OneToMany(mappedBy = "lastChapter", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReadingHistory> readingHistories;
 }

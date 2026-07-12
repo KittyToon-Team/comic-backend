@@ -45,6 +45,9 @@ public class User {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Column(name = "is_locked", columnDefinition = "boolean default false")
+    private Boolean isLocked = false;
+
     @JsonIgnore
     @OneToMany(mappedBy = "user")
     private List<Comment> comments;

@@ -51,16 +51,20 @@ public class Story {
     private LocalDateTime updatedAt;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "story")
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Chapter> chapters;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "story")
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "story")
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Favorite> favorites;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReadingHistory> readingHistories;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

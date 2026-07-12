@@ -27,6 +27,9 @@ public class Category {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "is_hidden", columnDefinition = "boolean default false")
+    private Boolean isHidden = false;
+
     @JsonIgnore
     @ManyToMany(mappedBy = "categories")
     private List<Story> stories;

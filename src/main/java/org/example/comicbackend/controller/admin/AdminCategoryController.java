@@ -38,27 +38,13 @@ public class AdminCategoryController {
         return ResponseEntity.ok(Map.of("message", "Thêm thể loại mới thành công!"));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateCategory(@PathVariable Integer id, @RequestBody CategoryRequest request) {
+    @PutMapping("/{id}/toggle-visibility")
+    public ResponseEntity<?> toggleVisibility(@PathVariable Integer id) {
         return categoryRepository.findById(id).map(category -> {
-            if (request.getName() == null || request.getName().trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Tên thể loại không được để trống!"));
-            }
-            category.setName(request.getName().trim());
-            category.setDescription(request.getDescription() != null ? request.getDescription().trim() : "");
-
+            category.setIsHidden(category.getIsHidden() == null ? true : !category.getIsHidden());
             categoryRepository.save(category);
-            return ResponseEntity.ok(Map.of("message", "Cập nhật thể loại thành công!"));
-        }).orElse(ResponseEntity.status(404).body(Map.of("message", "Không tìm thấy thể loại cần sửa.")));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteCategory(@PathVariable Integer id) {
-        if (!categoryRepository.existsById(id)) {
-            return ResponseEntity.status(404).body(Map.of("message", "Thể loại không tồn tại hoặc đã bị xóa trước đó."));
-        }
-
-        categoryRepository.deleteById(id);
-        return ResponseEntity.ok(Map.of("message", "Xóa thể loại thành công!"));
+            String status = category.getIsHidden() ? "đã bị ẩn" : "đã hiển thị lại";
+            return ResponseEntity.ok(Map.of("message", "Thể loại " + status + " thành công!", "isHidden", category.getIsHidden()));
+        }).orElse(ResponseEntity.status(404).body(Map.of("message", "Không tìm thấy thể loại.")));
     }
 }

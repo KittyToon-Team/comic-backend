@@ -76,4 +76,25 @@ public class AdminUserController {
         User saved = userRepository.save(user);
         return ResponseEntity.ok(saved);
     }
+
+    @PutMapping("/{id}/toggle-lock")
+    public ResponseEntity<?> toggleLock(@PathVariable Integer id) {
+        Optional<User> userOpt = userRepository.findById(id);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        User user = userOpt.get();
+
+        if (SUPER_ADMIN_USERNAME.equalsIgnoreCase(user.getUsername())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Không thể khóa tài khoản admin gốc của hệ thống"));
+        }
+
+        user.setIsLocked(user.getIsLocked() == null ? true : !user.getIsLocked());
+        userRepository.save(user);
+        
+        String status = user.getIsLocked() ? "đã bị khóa" : "đã được mở khóa";
+        return ResponseEntity.ok(Map.of("message", "Tài khoản " + user.getUsername() + " " + status + "!", "isLocked", user.getIsLocked()));
+    }
 }

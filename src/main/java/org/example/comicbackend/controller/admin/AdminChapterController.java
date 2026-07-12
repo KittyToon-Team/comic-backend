@@ -113,4 +113,13 @@ public class AdminChapterController {
 
         return ResponseEntity.ok(Map.of("message", "Cập nhật chương thành công!"));
     }
+
+    @DeleteMapping("/chapters/{id}")
+    public ResponseEntity<?> deleteChapter(@PathVariable Integer id) {
+        if (!chapterRepository.existsById(id)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Không tìm thấy chương để xóa"));
+        }
+        chapterRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "Đã xóa chương thành công!"));
+    }
 }
