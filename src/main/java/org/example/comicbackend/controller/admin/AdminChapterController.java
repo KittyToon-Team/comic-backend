@@ -8,6 +8,7 @@ import org.example.comicbackend.repository.ChapterRepository;
 import org.example.comicbackend.repository.StoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -15,7 +16,8 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*")
+@PreAuthorize("hasRole('ADMIN')")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
 public class AdminChapterController {
 
     @Autowired private ChapterRepository chapterRepository;
@@ -47,7 +49,7 @@ public class AdminChapterController {
         chapter.setStory(story);
         chapter.setChapterNumber(java.math.BigDecimal.valueOf(chapterNumber));
         chapter.setTitle(title);
-        chapter.setAccessType(accessType);
+        chapter.setAccessType(accessType != null ? accessType : 0);
         chapter.setViewCount(0);
         chapter.setCreatedAt(LocalDateTime.now());
         Chapter savedChapter = chapterRepository.save(chapter);
@@ -96,7 +98,7 @@ public class AdminChapterController {
 
         chapter.setChapterNumber(java.math.BigDecimal.valueOf(chapterNumber));
         chapter.setTitle(title);
-        chapter.setAccessType(accessType);
+        chapter.setAccessType(accessType != null ? accessType : 0);
         chapterRepository.save(chapter);
 
         chapterImageRepository.deleteByChapterId(id);

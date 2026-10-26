@@ -2,6 +2,7 @@ package org.example.comicbackend.controller.admin;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admin/upload")
+@PreAuthorize("hasRole('ADMIN')")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
 public class UploadController {
 
@@ -35,7 +37,6 @@ public class UploadController {
             String url = saveFile(file);
             return ResponseEntity.ok(Map.of("url", url));
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Could not upload file: " + e.getMessage()));
         }
     }
@@ -49,7 +50,6 @@ public class UploadController {
             }
             return ResponseEntity.ok(Map.of("urls", fileUrls));
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to upload batch"));
         }
     }
@@ -60,11 +60,11 @@ public class UploadController {
         if (originalFilename != null && originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
-        
+
         String newFilename = UUID.randomUUID().toString() + extension;
         Path path = Paths.get(UPLOAD_DIR + newFilename);
         Files.write(path, file.getBytes());
-        
+
         return "/uploads/" + newFilename;
     }
 }

@@ -6,16 +6,11 @@ import org.example.comicbackend.entity.Story;
 import org.example.comicbackend.entity.User;
 import org.example.comicbackend.repository.CommentRepository;
 import org.example.comicbackend.repository.StoryRepository;
-import org.example.comicbackend.repository.UserRepository;
+import org.example.comicbackend.security.SecurityUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,13 +23,10 @@ public class CommentController {
 
     private final StoryRepository storyRepository;
     private final CommentRepository commentRepository;
-    private final UserRepository userRepository;
 
-    public CommentController(StoryRepository storyRepository, CommentRepository commentRepository,
-                             UserRepository userRepository) {
+    public CommentController(StoryRepository storyRepository, CommentRepository commentRepository) {
         this.storyRepository = storyRepository;
         this.commentRepository = commentRepository;
-        this.userRepository = userRepository;
     }
 
     @GetMapping("/stories/{storyId}/comments")
@@ -45,16 +37,22 @@ public class CommentController {
 
     @PostMapping("/comments")
     public ResponseEntity<?> addComment(@RequestBody CommentRequest request) {
-        Optional<User> userOpt = userRepository.findById(request.getUserId());
+        User currentUser = SecurityUtils.getCurrentUser()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập để bình luận!"));
+
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Nội dung bình luận không được để trống!");
+        }
+
         Optional<Story> storyOpt = storyRepository.findById(request.getStoryId());
-        if (userOpt.isEmpty() || storyOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("User hoặc Story không tồn tại");
+        if (storyOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Truyện không tồn tại!");
         }
 
         Comment comment = new Comment();
-        comment.setContent(request.getContent());
+        comment.setContent(request.getContent().trim());
         comment.setCreatedAt(LocalDateTime.now());
-        comment.setUser(userOpt.get());
+        comment.setUser(currentUser); // Chống IDOR: Gán bình luận cho người dùng đang xác thực
         comment.setStory(storyOpt.get());
 
         Comment saved = commentRepository.save(comment);

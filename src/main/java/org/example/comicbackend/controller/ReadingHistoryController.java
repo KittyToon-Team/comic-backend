@@ -9,15 +9,11 @@ import org.example.comicbackend.repository.ChapterRepository;
 import org.example.comicbackend.repository.ReadingHistoryRepository;
 import org.example.comicbackend.repository.StoryRepository;
 import org.example.comicbackend.repository.UserRepository;
+import org.example.comicbackend.security.SecurityUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -47,15 +43,18 @@ public class ReadingHistoryController {
 
     @PostMapping("/reading-history")
     public ResponseEntity<?> saveReadingHistory(@RequestBody ReadingHistoryRequest request) {
-        Optional<User> userOpt = userRepository.findById(request.getUserId());
+        // Lấy user từ SecurityContext thay vì tin userId client gửi lên
+        User currentUser = SecurityUtils.getCurrentUser()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập để lưu lịch sử đọc!"));
+
         Optional<Story> storyOpt = storyRepository.findById(request.getStoryId());
         Optional<Chapter> chapterOpt = chapterRepository.findById(request.getLastChapterId());
-        if (userOpt.isEmpty() || storyOpt.isEmpty() || chapterOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body("User, Story hoặc Chapter không tồn tại");
+        if (storyOpt.isEmpty() || chapterOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Truyện hoặc Chương không tồn tại!");
         }
 
         ReadingHistory history = new ReadingHistory();
-        history.setUser(userOpt.get());
+        history.setUser(currentUser);
         history.setStory(storyOpt.get());
         history.setLastChapter(chapterOpt.get());
         history.setLastReadAt(LocalDateTime.now());
@@ -65,34 +64,42 @@ public class ReadingHistoryController {
 
     @GetMapping("/users/{userId}/reading-history")
     public ResponseEntity<?> getReadingHistory(@PathVariable Integer userId) {
-        Optional<User> user = userRepository.findById(userId);
-        if (user.isEmpty()) {
-            return ResponseEntity.badRequest().body("User not found");
+        User currentUser = SecurityUtils.getCurrentUser()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập!"));
+
+        // Chống IDOR: Chỉ người dùng đó hoặc Admin mới có quyền xem lịch sử đọc
+        if (!currentUser.getId().equals(userId) && !SecurityUtils.isAdmin()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem lịch sử đọc của người khác!");
         }
-        
-        List<Map<String, Object>> result = readingHistoryRepository.findByUserOrderByLastReadAtDesc(user.get()).stream()
-            .map(history -> {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", history.getId());
-                map.put("lastReadAt", history.getLastReadAt());
-                if (history.getStory() != null) {
-                    map.put("story", Map.of(
-                        "id", history.getStory().getId(),
-                        "title", history.getStory().getTitle() != null ? history.getStory().getTitle() : "",
-                        "coverImageUrl", history.getStory().getCoverImageUrl() != null ? history.getStory().getCoverImageUrl() : "",
-                        "slug", history.getStory().getSlug() != null ? history.getStory().getSlug() : ""
-                    ));
-                }
-                if (history.getLastChapter() != null) {
-                    map.put("chapter", Map.of(
-                        "id", history.getLastChapter().getId(),
-                        "chapterNumber", history.getLastChapter().getChapterNumber(),
-                        "title", history.getLastChapter().getTitle() != null ? history.getLastChapter().getTitle() : ""
-                    ));
-                }
-                return map;
-            }).collect(Collectors.toList());
-            
+
+        Optional<User> targetUser = userRepository.findById(userId);
+        if (targetUser.isEmpty()) {
+            return ResponseEntity.badRequest().body("Người dùng không tồn tại!");
+        }
+
+        List<Map<String, Object>> result = readingHistoryRepository.findByUserOrderByLastReadAtDesc(targetUser.get()).stream()
+                .map(history -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", history.getId());
+                    map.put("lastReadAt", history.getLastReadAt());
+                    if (history.getStory() != null) {
+                        map.put("story", Map.of(
+                                "id", history.getStory().getId(),
+                                "title", history.getStory().getTitle() != null ? history.getStory().getTitle() : "",
+                                "coverImageUrl", history.getStory().getCoverImageUrl() != null ? history.getStory().getCoverImageUrl() : "",
+                                "slug", history.getStory().getSlug() != null ? history.getStory().getSlug() : ""
+                        ));
+                    }
+                    if (history.getLastChapter() != null) {
+                        map.put("chapter", Map.of(
+                                "id", history.getLastChapter().getId(),
+                                "chapterNumber", history.getLastChapter().getChapterNumber(),
+                                "title", history.getLastChapter().getTitle() != null ? history.getLastChapter().getTitle() : ""
+                        ));
+                    }
+                    return map;
+                }).collect(Collectors.toList());
+
         return ResponseEntity.ok(result);
     }
 }

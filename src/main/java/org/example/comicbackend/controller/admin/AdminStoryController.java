@@ -7,6 +7,7 @@ import org.example.comicbackend.repository.CategoryRepository;
 import org.example.comicbackend.repository.StoryRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.Normalizer;
@@ -16,6 +17,7 @@ import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/admin/stories")
+@PreAuthorize("hasRole('ADMIN')")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174", "http://localhost:5175"})
 public class AdminStoryController {
 
